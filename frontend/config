@@ -1,4 +1,79 @@
-npm install -g @tarojs/cli
+const path = require('path')
 
-cd frontend
-taro init my-fullstack-app
+/**
+ * basic config
+ */
+const config = {
+  projectName: 'Fullstack_Demo', 
+  date: '2026-1-14', 
+  designWidth: 750, // size
+  deviceRatio: {
+    640: 2.34 / 2,
+    750: 1,
+    828: 1.81 / 2
+  },
+  sourceRoot: 'src',
+  outputRoot: 'dist', // Directory for compiled code output
+  plugins: [],
+  defineConstants: { // define global variable
+  },
+  copy: { 
+    patterns: [
+    ],
+    options: {
+    }
+  },
+  framework: 'react', 
+  compiler: 'webpack5', 
+  cache: {
+    enable: false 
+  },
+  mini: { // weixin mini project
+    postcss: {
+      pxtransform: {
+        enable: true,
+        config: {
+
+        }
+      },
+      url: {
+        enable: true,
+        config: {
+          limit: 1024 
+        }
+      },
+      cssModules: {
+        enable: false, 
+        config: {
+          namingPattern: 'global',
+          generateScopedName: '[name]__[local]___[hash:base64:5]'
+        }
+      }
+    }
+  },
+  h5: { // h5 web
+    publicPath: '/',
+    staticDirectory: 'static',
+    postcss: {
+      autoprefixer: {
+        enable: true,
+        config: {
+        }
+      },
+      cssModules: {
+        enable: false, 
+        config: {
+          namingPattern: 'global',
+          generateScopedName: '[name]__[local]___[hash:base64:5]'
+        }
+      }
+    }
+  }
+}
+
+module.exports = function (merge) {
+  if (process.env.NODE_ENV === 'development') {
+    return merge({}, config, require('./dev'))
+  }
+  return merge({}, config, require('./prod'))
+}
