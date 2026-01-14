@@ -1,73 +1,110 @@
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Taro from '@tarojs/taro';
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Picker, Button, Text } from '@tarojs/components';
+import request from '../../utils/request'; 
+import './index.scss';
 
-interface Appointment {
-  id: number;
-  phoneNumber: string;
-  serviceName: string;
-  date: string;
-  timeSlot: string;
-  createdAt: string;
-}
 
-const MyAppointmentsPage = () => {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    fetchAppointments();
-  }, []);
+const CreateAppointmentPage = () => {
+  const [serviceName, setServiceName] = useState('');
+  const [dateIndex, setDateIndex] = useState(0);
+  const [timeSlotIndex, setTimeSlotIndex] = useState(0);
 
-  const fetchAppointments = async () => {
-    setLoading(true);
+  const dateOptions = getDateOptions();
+
+  const handleSubmit = async () => {
+    if (!serviceName) {
+      Taro.showToast({ title: 'Service Name', icon: 'none' });
+      return;
+    }
+    if (!dateOptions[dateIndex]) {
+      Taro.showToast({ title: 'Date', icon: 'none' });
+      return;
+    }
+    if (!timeSlotOptions[timeSlotIndex]?.value) {
+      Taro.showToast({ title: 'Time', icon: 'none' });
+      return;
+    }
+
     try {
-      // get appointment list from backend
-      const res = await Taro.request({
-        url: 'http://localhost:8080/api/appointments',
-        method: 'GET',
-        header: {
-          'X-Phone': Taro.getStorageSync('user_phone')
+      // request create api
+      const appointmentData = await request({
+        url: '/appointments/create',
+        method: 'POST',
+        data: {
+          serviceName: serviceOptions.find(opt => opt.value === serviceName)?.label || serviceName, 
+          date: dateOptions[dateIndex],
+          timeSlot: timeSlotOptions[timeSlotIndex].value
         }
       });
 
-      const data = res.data as any;
-      if (data.success) {
-        setAppointments(data.data || []);
-      } else {
-        Taro.showToast({ title: data.message || 'Failed to get list', icon: 'none' });
-      }
-    } catch (error: any) {
-      console.error('Failed to get list:', error);
-      Taro.showToast({ title: error.errMsg || 'network error', icon: 'none' });
-    } finally {
-      setLoading(false);
+      
+      Taro.showToast({ title: 'Successful', icon: 'success' });
+      // clear input text
+      // setServiceName('');
+      // setDateIndex(0);
+      // setTimeSlotIndex(0);
+      setTimeout(() => {
+          Taro.navigateTo({ url: '/pages/myAppointments/index' }); // relink
+      }, 1500);
+
+    } catch (error) {
+      // handle error oin request.js  global processing
+      // console.log('error:', error.message);
     }
   };
 
-  if (loading) {
-    return <View className="page"><Text>Loading...</Text></View>;
-  }
-
   return (
-    <View className="page">
-      <Text>My Appointments ({appointments.length})</Text>
-      <ScrollView scrollY>
-        {appointments.length > 0 ? (
-          appointments.map((appt) => (
-            <View key={appt.id} className="appointment-item">
-              <Text>Service Name: {appt.serviceName}</Text>
-              <Text>Date: {appt.date}</Text>
-              <Text>Time: {appt.timeSlot}</Text>
-              <Text>Created at: {new Date(appt.createdAt).toLocaleString()}</Text>
-            </View>
-          ))
-        ) : (
-          <Text>NO appointment</Text>
-        )}
-      </ScrollView>
+    <View className="create-container">
+      <Text className="title">Create Appointment</Text>
+
+      <View className="form-item">
+        <Picker
+          mode="selector"
+          range={serviceOptions.map(opt => opt.label)} 
+          onChange={(e) => {
+            const index = e.detail.value;
+            setServiceName(serviceOptions[index].value); 
+          }}
+          value={serviceOptions.findIndex(opt => opt.value === serviceName)}
+        >
+        </Picker>
+      </View>
+
+      <View className="form-item">
+        <Text className="label">Choose Date:</Text>
+        <Picker
+          mode="selector"
+          range={dateOptions}
+          onChange={(e) => setDateIndex(e.detail.value)}
+          value={dateIndex}
+        >
+          <View className="picker-view">
+            {dateOptions[dateIndex] || 'Date'}
+          </View>
+        </Picker>
+      </View>
+
+      <View className="form-item">
+        <Text className="label">Timer:</Text>
+        <Picker
+          mode="selector"
+          range={timeSlotOptions.map(opt => opt.label)} 
+          onChange={(e) => setTimeSlotIndex(e.detail.value)}
+          value={timeSlotIndex}
+        >
+          <View className="picker-view">
+            {timeSlotOptions[timeSlotIndex]?.label || 'Choose period'}
+          </View>
+        </Picker>
+      </View>
+
+      <Button type="primary" onClick={handleSubmit} className="submit-button">
+        Submit
+      </Button>
     </View>
   );
 };
 
-export default MyAppointmentsPage;
+export default CreateAppointmentPage;
