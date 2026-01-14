@@ -1,0 +1,4 @@
+npm install -g @tarojs/cli
+
+cd frontend
+taro init my-fullstack-app
