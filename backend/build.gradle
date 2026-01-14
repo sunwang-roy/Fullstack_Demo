@@ -21,6 +21,9 @@ dependencies {
     runtimeOnly 'com.h2database:h2' // Using the in-memory database H2 facilitates rapid development and testing
     implementation 'org.springframework.boot:spring-boot-starter-validation' 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    //  Lombok
+    compileOnly 'org.projectlombok:lombok:1.18.30' 
+    annotationProcessor 'org.projectlombok:lombok' 
 }
 
 tasks.named('test') {
