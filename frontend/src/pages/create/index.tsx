@@ -1,72 +1,108 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import Taro from '@tarojs/taro';
-import { View, Input, Picker, Button } from '@tarojs/components';
+import { View, Picker, Button, Text } from '@tarojs/components';
+import request from '../../utils/request'; 
+import './index.scss';
+
+
 
 const CreateAppointmentPage = () => {
-  const [serviceName, setServiceName] = useState<string>('');
-  const [date, setDate] = useState<string>(''); // choose date
-  const [timeSlot, setTimeSlot] = useState<string>('09:00-10:00'); // default time period
+  const [serviceName, setServiceName] = useState('');
+  const [dateIndex, setDateIndex] = useState(0);
+  const [timeSlotIndex, setTimeSlotIndex] = useState(0);
 
-  const timeSlots = ['09:00-10:00', '10:00-11:00', '11:00-12:00', '14:00-15:00', '15:00-16:00'];
+  const dateOptions = getDateOptions();
 
-  const handleCreate = async () => {
-    if (!serviceName || !date) {
-      Taro.showToast({ title: 'please input all text!', icon: 'none' });
+  const handleSubmit = async () => {
+    if (!serviceName) {
+      Taro.showToast({ title: 'Service Name', icon: 'none' });
+      return;
+    }
+    if (!dateOptions[dateIndex]) {
+      Taro.showToast({ title: 'Date', icon: 'none' });
+      return;
+    }
+    if (!timeSlotOptions[timeSlotIndex]?.value) {
+      Taro.showToast({ title: 'Time', icon: 'none' });
       return;
     }
 
     try {
-      // backend api request
-      const res = await Taro.request({
-        url: 'http://localhost:8080/api/appointments',
+      // request create api
+      const appointmentData = await request({
+        url: '/appointments/create',
         method: 'POST',
-        header: {
-          'Content-Type': 'application/json',
-          'X-Phone': Taro.getStorageSync('user_phone') // put phone number in request header
-        },
         data: {
-          serviceName,
-          date,
-          timeSlot
+          serviceName: serviceOptions.find(opt => opt.value === serviceName)?.label || serviceName, 
+          date: dateOptions[dateIndex],
+          timeSlot: timeSlotOptions[timeSlotIndex].value
         }
       });
 
-      const data = res.data as any; 
-      if (data.success) {
-        Taro.showToast({ title: 'Successful created!', icon: 'success' });
-        // switch to list page
-        setTimeout(() => {
-          Taro.navigateTo({ url: '/pages/myAppointments/index' });
-        }, 1500);
-      } else {
-        Taro.showToast({ title: data.message || 'Failed appointment!', icon: 'none' });
-      }
-    } catch (error: any) {
-      console.error('Failed appointment:', error);
-      Taro.showToast({ title: error.errMsg || 'network error', icon: 'none' });
+      
+      Taro.showToast({ title: 'Successful', icon: 'success' });
+      // clear input text
+      // setServiceName('');
+      // setDateIndex(0);
+      // setTimeSlotIndex(0);
+      setTimeout(() => {
+          Taro.navigateTo({ url: '/pages/myAppointments/index' }); // relink
+      }, 1500);
+
+    } catch (error) {
+      // handle error oin request.js  global processing
+      // console.log('error:', error.message);
     }
   };
 
   return (
-    <View className="page">
-      <View className="input-group">
-        <Input
-          placeholder="Input Service Name"
-          value={serviceName}
-          onInput={(e) => setServiceName(e.detail.value)}
-        />
-        <Picker mode='date' onChange={(e) => setDate(e.detail.value)}>
-          <View className="picker"> // choose date box
-            Choose date: {date || 'Choose'}
-          </View>
+    <View className="create-container">
+      <Text className="title">Create Appointment</Text>
+
+      <View className="form-item">
+        <Picker
+          mode="selector"
+          range={serviceOptions.map(opt => opt.label)} 
+          onChange={(e) => {
+            const index = e.detail.value;
+            setServiceName(serviceOptions[index].value); 
+          }}
+          value={serviceOptions.findIndex(opt => opt.value === serviceName)}
+        >
         </Picker>
-        <Picker mode='selector' range={timeSlots} onChange={(e) => setTimeSlot(timeSlots[parseInt(e.detail.value)])}>
-          <View className="picker"> // time peroid box
-            Time Period: {timeSlot}
+      </View>
+
+      <View className="form-item">
+        <Text className="label">Choose Date:</Text>
+        <Picker
+          mode="selector"
+          range={dateOptions}
+          onChange={(e) => setDateIndex(e.detail.value)}
+          value={dateIndex}
+        >
+          <View className="picker-view">
+            {dateOptions[dateIndex] || 'Date'}
           </View>
         </Picker>
       </View>
-      <Button onClick={handleCreate}>Submit</Button>
+
+      <View className="form-item">
+        <Text className="label">Timer:</Text>
+        <Picker
+          mode="selector"
+          range={timeSlotOptions.map(opt => opt.label)} 
+          onChange={(e) => setTimeSlotIndex(e.detail.value)}
+          value={timeSlotIndex}
+        >
+          <View className="picker-view">
+            {timeSlotOptions[timeSlotIndex]?.label || 'Choose period'}
+          </View>
+        </Picker>
+      </View>
+
+      <Button type="primary" onClick={handleSubmit} className="submit-button">
+        Submit
+      </Button>
     </View>
   );
 };
