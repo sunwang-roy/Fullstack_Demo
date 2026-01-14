@@ -5,6 +5,10 @@ This project has achieved the required full-stack functionality, including login
   - **Backend**: Java 21, Spring Boot 3.2.0, Gradle, JPA, H2 Database
   - **Frontend**: Taro v3.x, TypeScript, WeChat Mini Program
 
+## key job
+  - Global error handle
+  - idempotency
+
 ## How to run
 ### Backend
 1. Java JDK 21 and Gradle should be installed.
