@@ -1,48 +1,84 @@
 import Taro from '@tarojs/taro';
-import axios, { AxiosRequestConfig } from 'axios';
 
-const BASE_URL = 'http://localhost:8080/api'; // local test
+const BASE_URL = 'http://localhost:8989/api'; 
 
-const request = axios.create({
-  baseURL: BASE_URL,
-  timeout: 10000, 
-});
+const request = (options) => {
+  const { url, method, data, header = {} } = options;
 
-// request interceptor
-request.interceptors.request.use(
-  (config: AxiosRequestConfig) => {
-    // get phone number from local storage(Taro)
-    const phoneNumber = Taro.getStorageSync('user_phone');
-    if (phoneNumber) {
-      // add phone number into header
-      if (!config.headers) config.headers = {};
-      config.headers['X-Phone'] = phoneNumber;
-    }
-    console.log('Requesting:', config);
-    return config;
-  },
-  (error) => {
-    console.error('Error request:', error);
-    return Promise.reject(error);
+  // get token from local if have
+  let token = '';
+  try {
+    token = Taro.getStorageSync('auth_token');
+  } catch (e) {
+    console.warn('get local Token failed:', e);
   }
-);
 
-request.interceptors.response.use(
-  (response) => {
-    console.log('Respone:', response);
-    // todo: The response format can be uniformly processed here
-    return response.data;
-  },
-  (error) => {
-    console.error('Error:', error);
-    // 可以在这里统一处理错误
-    if (error.response?.status === 401) {
-      // if failed, then go to login page
-      Taro.showToast({ title: 'Please login', icon: 'none' });
-      Taro.navigateTo({ url: '/pages/login/index' });
-    }
-    return Promise.reject(error);
-  }
-);
+ 
+  const defaultHeaders = {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}) // if have token
+  };
+
+  // merge header
+  const mergedHeaders = { ...defaultHeaders, ...header };
+
+  return new Promise((resolve, reject) => {
+    Taro.request({
+      url: `${BASE_URL}${url}`,
+      method: method || 'GET',
+      data: data,
+      header: mergedHeaders,
+      success: (res) => {
+        const { statusCode, data: response } = res;
+
+        if (statusCode >= 200 && statusCode < 300) {
+         
+          if (response.success) {
+            resolve(response.data); 
+          } else {
+            // if failed, 
+            Taro.showToast({
+              title: response.message || 'failed',
+              icon: 'none',
+              duration: 2000
+            });
+            
+            if(response.message.includes('login')) { // for example by login error
+               // Taro.clearStorage(); // clear local token
+               // Taro.navigateTo({ url: '/pages/login/index' }); // relink
+            }
+            reject(new Error(response.message || 'unknown error'));
+          }
+        } else {
+          
+          console.error(`API failed request: ${method} ${url}, Status: ${statusCode}`);
+          let errorMessage = 'failed network request';
+          if(statusCode === 401) {
+             errorMessage = 'token is unvalid, please re-login';
+             // Taro.clearStorage(); // clear token
+             // Taro.navigateTo({ url: '/pages/login/index' }); // relink
+          } else if(statusCode === 500) {
+             errorMessage = 'inner error';
+          }
+          Taro.showToast({
+            title: errorMessage,
+            icon: 'none',
+            duration: 2000
+          });
+          reject(new Error(errorMessage));
+        }
+      },
+      fail: (err) => {
+        console.error('failed network request:', err);
+        Taro.showToast({
+          title: 'failed network request: please check network.',
+          icon: 'none',
+          duration: 2000
+        });
+        reject(err);
+      }
+    });
+  });
+};
 
 export default request;
