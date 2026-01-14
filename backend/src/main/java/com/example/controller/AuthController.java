@@ -14,7 +14,7 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    // 固定的验证码
+    // fixed code for local test
     private static final String FIXED_CODE = "123456";
 
 
